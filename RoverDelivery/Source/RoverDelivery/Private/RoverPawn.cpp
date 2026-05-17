@@ -200,6 +200,18 @@ void ARoverPawn::HandleInteractStarted()
 
 void ARoverPawn::HandlePauseStarted()
 {
+    UE_LOG(LogTemp, Warning, TEXT("Pause input received"));
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            2.0f,
+            FColor::Yellow,
+            TEXT("Pause input received")
+        );
+    }
+
     OnPausePressed();
 }
 
