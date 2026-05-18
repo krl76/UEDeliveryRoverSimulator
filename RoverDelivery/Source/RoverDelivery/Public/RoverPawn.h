@@ -70,6 +70,9 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Input")
     UInputAction* LookYAction;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Input")
+    UInputAction* TogglePhoneAction;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Movement")
@@ -102,6 +105,8 @@ private:
 
     float CameraYaw = 0.0f;
     float CameraPitch = -25.0f;
+    
+    bool bRoverInputBlocked = false;
 
 private:
     void HandleThrottle(const FInputActionValue& Value);
@@ -126,6 +131,8 @@ private:
     void MoveRover(float DeltaTime);
     void RotateRover(float DeltaTime);
     void ApplyCameraRotation();
+    
+    void HandleTogglePhoneStarted();
 
 protected:
     UFUNCTION(BlueprintImplementableEvent, Category = "Rover|Events")
@@ -136,4 +143,10 @@ protected:
 
     UFUNCTION(BlueprintImplementableEvent, Category = "Rover|Events")
     void OnCameraTogglePressed();
+    
+    UFUNCTION(BlueprintImplementableEvent, Category = "Rover|Events")
+    void OnPhoneTogglePressed();
+    
+    UFUNCTION(BlueprintCallable, Category = "Rover|Input")
+    void SetRoverInputBlocked(bool bBlocked);
 };

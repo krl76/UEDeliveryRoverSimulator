@@ -133,6 +133,16 @@ void ARoverPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
     {
         EnhancedInputComponent->BindAction(CameraToggleAction, ETriggerEvent::Started, this, &ARoverPawn::HandleCameraToggleStarted);
     }
+    
+    if (TogglePhoneAction)
+    {
+        EnhancedInputComponent->BindAction(
+            TogglePhoneAction,
+            ETriggerEvent::Started,
+            this,
+            &ARoverPawn::HandleTogglePhoneStarted
+        );
+    }
 }
 
 void ARoverPawn::HandleThrottle(const FInputActionValue& Value)
@@ -177,6 +187,11 @@ void ARoverPawn::HandleBrakeCompleted()
 
 void ARoverPawn::HandleLookX(const FInputActionValue& Value)
 {
+    if (bRoverInputBlocked)
+    {
+        return;
+    }
+    
     const float LookAmount = Value.Get<float>();
 
     CameraYaw += LookAmount * LookSensitivity;
@@ -185,6 +200,11 @@ void ARoverPawn::HandleLookX(const FInputActionValue& Value)
 
 void ARoverPawn::HandleLookY(const FInputActionValue& Value)
 {
+    if (bRoverInputBlocked)
+    {
+        return;
+    }
+    
     const float LookAmount = Value.Get<float>();
 
     CameraPitch += LookAmount * LookSensitivity;
@@ -222,6 +242,11 @@ void ARoverPawn::HandleCameraToggleStarted()
 
 void ARoverPawn::MoveRover(float DeltaTime)
 {
+    if (bRoverInputBlocked)
+    {
+        return;
+    }
+    
     if (FMath::IsNearlyZero(ThrottleValue))
     {
         return;
@@ -263,5 +288,24 @@ void ARoverPawn::ApplyCameraRotation()
     if (SpringArm)
     {
         SpringArm->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.0f));
+    }
+}
+
+void ARoverPawn::HandleTogglePhoneStarted()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Phone toggle input received"));
+    OnPhoneTogglePressed();
+}
+
+void ARoverPawn::SetRoverInputBlocked(bool bBlocked)
+{
+    bRoverInputBlocked = bBlocked;
+
+    if (bRoverInputBlocked)
+    {
+        ThrottleValue = 0.0f;
+        SteerValue = 0.0f;
+        bBoosting = false;
+        bBraking = false;
     }
 }
