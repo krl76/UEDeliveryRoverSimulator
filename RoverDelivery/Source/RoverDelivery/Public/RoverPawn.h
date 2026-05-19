@@ -95,6 +95,21 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Camera")
     float MaxCameraPitch = -5.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float BatteryPercent = 1.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float BatteryDrainRate = 0.015f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float BoostBatteryDrainMultiplier = 2.5f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float LowBatteryThreshold = 0.2f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float LowBatterySpeedMultiplier = 0.55f;
 
 private:
     float ThrottleValue = 0.0f;
@@ -133,6 +148,8 @@ private:
     void ApplyCameraRotation();
     
     void HandleTogglePhoneStarted();
+    
+    void UpdateBattery(float DeltaTime);
 
 protected:
     UFUNCTION(BlueprintImplementableEvent, Category = "Rover|Events")
@@ -149,4 +166,7 @@ protected:
     
     UFUNCTION(BlueprintCallable, Category = "Rover|Input")
     void SetRoverInputBlocked(bool bBlocked);
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rover|Battery")
+    float GetBatteryPercent() const;
 };

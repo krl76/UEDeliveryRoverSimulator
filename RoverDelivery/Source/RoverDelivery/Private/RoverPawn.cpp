@@ -74,6 +74,8 @@ void ARoverPawn::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    UpdateBattery(DeltaTime);
+
     MoveRover(DeltaTime);
     RotateRover(DeltaTime);
 }
@@ -266,6 +268,11 @@ void ARoverPawn::MoveRover(float DeltaTime)
     {
         CurrentSpeed *= BrakeMultiplier;
     }
+    
+    if (BatteryPercent <= LowBatteryThreshold)
+    {
+        CurrentSpeed *= LowBatterySpeedMultiplier;
+    }
 
     const FVector ForwardDirection = GetActorForwardVector();
     const FVector DeltaLocation = ForwardDirection * ThrottleValue * CurrentSpeed * DeltaTime;
@@ -311,4 +318,34 @@ void ARoverPawn::SetRoverInputBlocked(bool bBlocked)
         bBoosting = false;
         bBraking = false;
     }
+}
+
+float ARoverPawn::GetBatteryPercent() const
+{
+    return BatteryPercent;
+}
+
+void ARoverPawn::UpdateBattery(float DeltaTime)
+{
+    if (bRoverInputBlocked)
+    {
+        return;
+    }
+
+    const bool bIsMoving = !FMath::IsNearlyZero(ThrottleValue);
+
+    if (!bIsMoving)
+    {
+        return;
+    }
+
+    float CurrentDrainRate = BatteryDrainRate;
+
+    if (bBoosting)
+    {
+        CurrentDrainRate *= BoostBatteryDrainMultiplier;
+    }
+
+    BatteryPercent -= CurrentDrainRate * DeltaTime;
+    BatteryPercent = FMath::Clamp(BatteryPercent, 0.0f, 1.0f);
 }
