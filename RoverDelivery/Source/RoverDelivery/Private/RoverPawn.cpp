@@ -8,6 +8,8 @@
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Engine/World.h"
+#include "DrawDebugHelpers.h"
 
 ARoverPawn::ARoverPawn()
 {
@@ -27,6 +29,7 @@ ARoverPawn::ARoverPawn()
     RoverMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RoverMesh"));
     RoverMesh->SetupAttachment(CollisionBox);
     RoverMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    RoverMesh->SetSimulatePhysics(false);
 
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
     SpringArm->SetupAttachment(CollisionBox);
@@ -74,10 +77,14 @@ void ARoverPawn::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    UpdateBattery(DeltaTime);
+    bIsGrounded = CheckGrounded();
+    bIsUpright = CheckUpright();
+
+    //KeepRoverLevel();
 
     MoveRover(DeltaTime);
     RotateRover(DeltaTime);
+    UpdateBattery(DeltaTime);
 }
 
 void ARoverPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -146,6 +153,16 @@ void ARoverPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
             ETriggerEvent::Started,
             this,
             &ARoverPawn::HandleTogglePhoneStarted
+        );
+    }
+    
+    if (ResetRoverAction)
+    {
+        EnhancedInputComponent->BindAction(
+            ResetRoverAction,
+            ETriggerEvent::Started,
+            this,
+            &ARoverPawn::HandleResetRoverStarted
         );
     }
 }
@@ -249,48 +266,227 @@ void ARoverPawn::MoveRover(float DeltaTime)
 {
     if (bRoverInputBlocked)
     {
+        CurrentForwardSpeed = 0.0f;
         return;
     }
     
-    if (FMath::IsNearlyZero(ThrottleValue))
+    if (!bIsGrounded || !bIsUpright)
     {
+        CurrentForwardSpeed = FMath::FInterpConstantTo(
+            CurrentForwardSpeed,
+            0.0f,
+            DeltaTime,
+            BrakeDeceleration
+        );
         return;
     }
 
-    float CurrentSpeed = MoveSpeed;
+    float TargetSpeed = 0.0f;
 
-    if (bBoosting)
+    const bool bHasThrottleInput = !FMath::IsNearlyZero(ThrottleValue);
+    const bool bCanBoost = bBoosting && BatteryPercent > 0.05f && ThrottleValue > 0.0f;
+
+    if (bHasThrottleInput)
     {
-        CurrentSpeed = BoostSpeed;
+        if (ThrottleValue > 0.0f)
+        {
+            TargetSpeed = bCanBoost ? BoostMaxSpeed : MaxForwardSpeed;
+            TargetSpeed *= ThrottleValue;
+        }
+        else
+        {
+            TargetSpeed = MaxReverseSpeed * ThrottleValue;
+        }
     }
 
     if (bBraking)
     {
-        CurrentSpeed *= BrakeMultiplier;
+        TargetSpeed = 0.0f;
+    }
+
+    if (BatteryPercent <= 0.0f)
+    {
+        TargetSpeed *= EmptyBatterySpeedMultiplier;
+    }
+    else if (BatteryPercent <= LowBatteryThreshold)
+    {
+        TargetSpeed *= LowBatterySpeedMultiplier;
+    }
+
+    float SpeedChangeRate = Acceleration;
+
+    if (bBraking)
+    {
+        SpeedChangeRate = BrakeDeceleration;
+    }
+    else if (!bHasThrottleInput)
+    {
+        SpeedChangeRate = Deceleration;
+    }
+
+    CurrentForwardSpeed = FMath::FInterpConstantTo(
+        CurrentForwardSpeed,
+        TargetSpeed,
+        DeltaTime,
+        SpeedChangeRate
+    );
+    
+    if (!bHasThrottleInput && FMath::Abs(CurrentForwardSpeed) < 25.0f)
+    {
+        CurrentForwardSpeed = 0.0f;
+        return;
     }
     
-    if (BatteryPercent <= LowBatteryThreshold)
+    if (FMath::IsNearlyZero(CurrentForwardSpeed, 2.0f))
     {
-        CurrentSpeed *= LowBatterySpeedMultiplier;
+        CurrentForwardSpeed = 0.0f;
+        return;
     }
 
-    const FVector ForwardDirection = GetActorForwardVector();
-    const FVector DeltaLocation = ForwardDirection * ThrottleValue * CurrentSpeed * DeltaTime;
+    FVector ForwardDirection = GetActorForwardVector();
+    ForwardDirection.Z = 0.0f;
+    ForwardDirection.Normalize();
 
-    AddActorWorldOffset(DeltaLocation, false);
+    const FVector DeltaLocation = ForwardDirection * CurrentForwardSpeed * DeltaTime;
+    
+    MoveWithBlocking(DeltaLocation);
 }
 
 void ARoverPawn::RotateRover(float DeltaTime)
 {
-    if (FMath::IsNearlyZero(SteerValue))
+    if (bRoverInputBlocked)
     {
+        CurrentSteerValue = 0.0f;
+        return;
+    }
+    
+    if (!bIsGrounded || !bIsUpright)
+    {
+        CurrentSteerValue = 0.0f;
         return;
     }
 
-    const float DeltaYaw = SteerValue * TurnSpeed * DeltaTime;
-    const FRotator DeltaRotation = FRotator(0.0f, DeltaYaw, 0.0f);
+    CurrentSteerValue = FMath::FInterpTo(
+        CurrentSteerValue,
+        SteerValue,
+        DeltaTime,
+        SteerInterpSpeed
+    );
 
-    AddActorLocalRotation(DeltaRotation, false);
+    if (FMath::IsNearlyZero(CurrentSteerValue, 0.01f))
+    {
+        CurrentSteerValue = 0.0f;
+        return;
+    }
+
+    const float SpeedAlpha = FMath::Clamp(
+        FMath::Abs(CurrentForwardSpeed) / MaxForwardSpeed,
+        0.0f,
+        1.0f
+    );
+
+    float TurnMultiplier = FMath::Lerp(MinTurnMultiplier, 1.0f, SpeedAlpha);
+
+    if (bBoosting)
+    {
+        TurnMultiplier *= BoostTurnMultiplier;
+    }
+
+    const float DirectionMultiplier = CurrentForwardSpeed < -5.0f ? -1.0f : 1.0f;
+
+    const float DeltaYaw =
+        CurrentSteerValue *
+        MaxTurnRate *
+        TurnMultiplier *
+        DirectionMultiplier *
+        DeltaTime;
+
+    AddActorLocalRotation(FRotator(0.0f, DeltaYaw, 0.0f), false);
+}
+
+bool ARoverPawn::CheckGrounded() const
+{
+    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, GroundCheckStartHeight);
+    const FVector End = Start - FVector(0.0f, 0.0f, GroundTraceLength);
+
+    FHitResult HitResult;
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    const bool bHit = GetWorld()->LineTraceSingleByChannel(
+        HitResult,
+        Start,
+        End,
+        ECC_Visibility,
+        Params
+    );
+
+    return bHit;
+}
+
+bool ARoverPawn::CheckUpright() const
+{
+    const float UprightDot = FVector::DotProduct(GetActorUpVector(), FVector::UpVector);
+    return UprightDot >= MinUprightDot;
+}
+
+void ARoverPawn::KeepRoverLevel()
+{
+    FRotator CurrentRotation = GetActorRotation();
+
+    CurrentRotation.Pitch = 0.0f;
+    CurrentRotation.Roll = 0.0f;
+
+    SetActorRotation(CurrentRotation);
+}
+
+void ARoverPawn::HandleResetRoverStarted()
+{
+    ResetRoverUpright();
+}
+
+void ARoverPawn::ResetRoverUpright()
+{
+    FVector NewLocation = GetActorLocation();
+
+    const FVector Start = NewLocation + FVector(0.0f, 0.0f, 300.0f);
+    const FVector End = NewLocation - FVector(0.0f, 0.0f, 800.0f);
+
+    FHitResult HitResult;
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    const bool bHit = GetWorld()->LineTraceSingleByChannel(
+        HitResult,
+        Start,
+        End,
+        ECC_Visibility,
+        Params
+    );
+
+    if (bHit)
+    {
+        NewLocation = HitResult.Location + FVector(0.0f, 0.0f, 70.0f);
+    }
+    else
+    {
+        NewLocation += FVector(0.0f, 0.0f, 120.0f);
+    }
+
+    FRotator NewRotation = GetActorRotation();
+    NewRotation.Pitch = 0.0f;
+    NewRotation.Roll = 0.0f;
+
+    SetActorLocationAndRotation(NewLocation, NewRotation, false, nullptr, ETeleportType::TeleportPhysics);
+
+    CurrentForwardSpeed = 0.0f;
+    CurrentSteerValue = 0.0f;
+    ThrottleValue = 0.0f;
+    SteerValue = 0.0f;
+    bBoosting = false;
+    bBraking = false;
 }
 
 void ARoverPawn::ApplyCameraRotation()
@@ -311,18 +507,32 @@ void ARoverPawn::SetRoverInputBlocked(bool bBlocked)
 {
     bRoverInputBlocked = bBlocked;
 
-    if (bRoverInputBlocked)
-    {
-        ThrottleValue = 0.0f;
-        SteerValue = 0.0f;
-        bBoosting = false;
-        bBraking = false;
-    }
+    ThrottleValue = 0.0f;
+    SteerValue = 0.0f;
+    CurrentSteerValue = 0.0f;
+    CurrentForwardSpeed = 0.0f;
+    bBoosting = false;
+    bBraking = false;
 }
 
 float ARoverPawn::GetBatteryPercent() const
 {
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            777,
+            0.0f,
+            FColor::Green,
+            FString::Printf(TEXT("C++ Battery: %.3f"), BatteryPercent)
+        );
+    }
+
     return BatteryPercent;
+}
+
+float ARoverPawn::GetCurrentForwardSpeed() const
+{
+    return CurrentForwardSpeed;
 }
 
 void ARoverPawn::UpdateBattery(float DeltaTime)
@@ -332,20 +542,125 @@ void ARoverPawn::UpdateBattery(float DeltaTime)
         return;
     }
 
-    const bool bIsMoving = !FMath::IsNearlyZero(ThrottleValue);
+    if (BatteryPercent <= 0.0f)
+    {
+        BatteryPercent = 0.0f;
+        return;
+    }
 
-    if (!bIsMoving)
+    const bool bMotorIsWorking =
+        FMath::Abs(ThrottleValue) > 0.05f ||
+        FMath::Abs(CurrentForwardSpeed) > 50.0f;
+
+    if (!bMotorIsWorking)
     {
         return;
     }
 
     float CurrentDrainRate = BatteryDrainRate;
 
-    if (bBoosting)
+    if (bBoosting && ThrottleValue > 0.05f)
     {
         CurrentDrainRate *= BoostBatteryDrainMultiplier;
     }
 
     BatteryPercent -= CurrentDrainRate * DeltaTime;
     BatteryPercent = FMath::Clamp(BatteryPercent, 0.0f, 1.0f);
+}
+
+bool ARoverPawn::IsObstacleAhead(float DeltaTime) const
+{
+    if (FMath::Abs(CurrentForwardSpeed) < 20.0f)
+    {
+        return false;
+    }
+
+    FVector Direction = GetActorForwardVector();
+    Direction.Z = 0.0f;
+    Direction.Normalize();
+
+    if (CurrentForwardSpeed < 0.0f)
+    {
+        Direction *= -1.0f;
+    }
+
+    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, ObstacleTraceHeight);
+    const FVector End = Start + Direction * (ObstacleTraceLength + FMath::Abs(CurrentForwardSpeed) * DeltaTime);
+
+    FHitResult HitResult;
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    const bool bHit = GetWorld()->SweepSingleByChannel(
+        HitResult,
+        Start,
+        End,
+        FQuat::Identity,
+        ECC_Visibility,
+        FCollisionShape::MakeSphere(ObstacleTraceRadius),
+        Params
+    );
+
+    if (!bHit)
+    {
+        return false;
+    }
+    
+    if (HitResult.ImpactNormal.Z > 0.45f)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+void ARoverPawn::MoveWithBlocking(const FVector& DeltaLocation)
+{
+    if (DeltaLocation.IsNearlyZero())
+    {
+        return;
+    }
+
+    const FVector Start = GetActorLocation() + FVector(0.0f, 0.0f, BodyBlockTraceHeight);
+    const FVector End = Start + DeltaLocation;
+
+    FHitResult HitResult;
+
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+    Params.bTraceComplex = true;
+
+    const bool bHit = GetWorld()->SweepSingleByChannel(
+        HitResult,
+        Start,
+        End,
+        FQuat::Identity,
+        ECC_Visibility,
+        FCollisionShape::MakeSphere(BodyBlockTraceRadius),
+        Params
+    );
+
+    if (!bHit)
+    {
+        AddActorWorldOffset(DeltaLocation, false);
+        return;
+    }
+
+    // Если попали в пол/дорогу/склон, а не в стену — разрешаем движение.
+    if (HitResult.ImpactNormal.Z > WallNormalZLimit)
+    {
+        AddActorWorldOffset(DeltaLocation, false);
+        return;
+    }
+
+    const FVector MoveDirection = DeltaLocation.GetSafeNormal();
+    const float SafeDistance = FMath::Max(0.0f, HitResult.Distance - WallStopOffset);
+
+    if (SafeDistance > 1.0f)
+    {
+        AddActorWorldOffset(MoveDirection * SafeDistance, false);
+    }
+
+    CurrentForwardSpeed = 0.0f;
 }

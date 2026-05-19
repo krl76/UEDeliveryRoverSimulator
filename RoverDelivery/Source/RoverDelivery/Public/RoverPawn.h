@@ -73,6 +73,9 @@ protected:
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Input")
     UInputAction* TogglePhoneAction;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Input")
+    UInputAction* ResetRoverAction;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Movement")
@@ -86,6 +89,42 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Movement")
     float TurnSpeed = 100.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float MaxForwardSpeed = 850.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float MaxReverseSpeed = 420.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float BoostMaxSpeed = 1250.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float Acceleration = 520.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float Deceleration = 420.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float BrakeDeceleration = 1200.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Movement", meta = (AllowPrivateAccess = "true"))
+    float CurrentForwardSpeed = 0.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Steering", meta = (AllowPrivateAccess = "true"))
+    float MaxTurnRate = 95.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Steering", meta = (AllowPrivateAccess = "true"))
+    float SteerInterpSpeed = 6.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Steering", meta = (AllowPrivateAccess = "true"))
+    float MinTurnMultiplier = 0.35f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Steering", meta = (AllowPrivateAccess = "true"))
+    float BoostTurnMultiplier = 0.75f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Steering", meta = (AllowPrivateAccess = "true"))
+    float CurrentSteerValue = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Camera")
     float LookSensitivity = 0.7f;
@@ -110,6 +149,45 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
     float LowBatterySpeedMultiplier = 0.55f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float EmptyBatterySpeedMultiplier = 0.25f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Ground", meta = (AllowPrivateAccess = "true"))
+    float GroundTraceLength = 120.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Ground", meta = (AllowPrivateAccess = "true"))
+    float GroundCheckStartHeight = 40.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Ground", meta = (AllowPrivateAccess = "true"))
+    float MinUprightDot = 0.65f;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Rover|Ground", meta = (AllowPrivateAccess = "true"))
+    bool bIsGrounded = false;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Rover|Ground", meta = (AllowPrivateAccess = "true"))
+    bool bIsUpright = true;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float ObstacleTraceLength = 95.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float ObstacleTraceRadius = 28.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float ObstacleTraceHeight = 75.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float BodyBlockTraceRadius = 42.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float BodyBlockTraceHeight = 65.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float WallNormalZLimit = 0.45f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
+    float WallStopOffset = 5.0f;
 
 private:
     float ThrottleValue = 0.0f;
@@ -149,7 +227,17 @@ private:
     
     void HandleTogglePhoneStarted();
     
+    void HandleResetRoverStarted();
+    
     void UpdateBattery(float DeltaTime);
+    
+    bool CheckGrounded() const;
+    bool CheckUpright() const;
+    void KeepRoverLevel();
+    void ResetRoverUpright();
+    
+    bool IsObstacleAhead(float DeltaTime) const;
+    void MoveWithBlocking(const FVector& DeltaLocation);
 
 protected:
     UFUNCTION(BlueprintImplementableEvent, Category = "Rover|Events")
@@ -166,6 +254,9 @@ protected:
     
     UFUNCTION(BlueprintCallable, Category = "Rover|Input")
     void SetRoverInputBlocked(bool bBlocked);
+    
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rover|Movement")
+    float GetCurrentForwardSpeed() const;
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rover|Battery")
     float GetBatteryPercent() const;
