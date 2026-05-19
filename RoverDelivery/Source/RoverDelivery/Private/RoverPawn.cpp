@@ -264,6 +264,12 @@ void ARoverPawn::HandleCameraToggleStarted()
 
 void ARoverPawn::MoveRover(float DeltaTime)
 {
+    if (bIsCharging)
+    {
+        CurrentForwardSpeed = 0.0f;
+        return;
+    }
+    
     if (bRoverInputBlocked)
     {
         CurrentForwardSpeed = 0.0f;
@@ -354,6 +360,12 @@ void ARoverPawn::MoveRover(float DeltaTime)
 
 void ARoverPawn::RotateRover(float DeltaTime)
 {
+    if (bIsCharging)
+    {
+        CurrentSteerValue = 0.0f;
+        return;
+    }
+    
     if (bRoverInputBlocked)
     {
         CurrentSteerValue = 0.0f;
@@ -517,16 +529,6 @@ void ARoverPawn::SetRoverInputBlocked(bool bBlocked)
 
 float ARoverPawn::GetBatteryPercent() const
 {
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(
-            777,
-            0.0f,
-            FColor::Green,
-            FString::Printf(TEXT("C++ Battery: %.3f"), BatteryPercent)
-        );
-    }
-
     return BatteryPercent;
 }
 
@@ -537,6 +539,20 @@ float ARoverPawn::GetCurrentForwardSpeed() const
 
 void ARoverPawn::UpdateBattery(float DeltaTime)
 {
+    if (bIsCharging)
+    {
+        BatteryPercent += BatteryChargeRate * DeltaTime;
+        BatteryPercent = FMath::Clamp(BatteryPercent, 0.0f, 1.0f);
+
+        if (BatteryPercent >= 1.0f)
+        {
+            BatteryPercent = 1.0f;
+            bIsCharging = false;
+        }
+
+        return;
+    }
+    
     if (bRoverInputBlocked)
     {
         return;
@@ -646,8 +662,7 @@ void ARoverPawn::MoveWithBlocking(const FVector& DeltaLocation)
         AddActorWorldOffset(DeltaLocation, false);
         return;
     }
-
-    // Если попали в пол/дорогу/склон, а не в стену — разрешаем движение.
+    
     if (HitResult.ImpactNormal.Z > WallNormalZLimit)
     {
         AddActorWorldOffset(DeltaLocation, false);
@@ -663,4 +678,26 @@ void ARoverPawn::MoveWithBlocking(const FVector& DeltaLocation)
     }
 
     CurrentForwardSpeed = 0.0f;
+}
+
+void ARoverPawn::StartCharging()
+{
+    bIsCharging = true;
+
+    CurrentForwardSpeed = 0.0f;
+    CurrentSteerValue = 0.0f;
+    ThrottleValue = 0.0f;
+    SteerValue = 0.0f;
+    bBoosting = false;
+    bBraking = false;
+}
+
+void ARoverPawn::StopCharging()
+{
+    bIsCharging = false;
+}
+
+bool ARoverPawn::IsCharging() const
+{
+    return bIsCharging;
 }

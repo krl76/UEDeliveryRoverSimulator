@@ -188,6 +188,12 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Collision", meta = (AllowPrivateAccess = "true"))
     float WallStopOffset = 5.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    float BatteryChargeRate = 0.25f;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
+    bool bIsCharging = false;
 
 private:
     float ThrottleValue = 0.0f;
@@ -260,4 +266,13 @@ protected:
     
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rover|Battery")
     float GetBatteryPercent() const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Rover|Battery")
+    void StartCharging();
+
+    UFUNCTION(BlueprintCallable, Category = "Rover|Battery")
+    void StopCharging();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rover|Battery")
+    bool IsCharging() const;
 };
