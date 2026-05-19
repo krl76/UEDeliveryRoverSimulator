@@ -1,2 +1,19 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+/RoverDelivery/Content/Downtown_West/Assets/background_mountain/Textures/T_snow_mountain01_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Asphalt/T_asphalt_base_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Asphalt/T_asphalt_damaged_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Bricks_Ground/T_brick_ground_straight_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Bricks_Ground/T_brick_standard_b_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_Cafe_A/Bricks_A/T_Bricks_a_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_Cafe_A/Bricks_B/T_bricks_b_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_Cafe_A/Bricks_B/T_bricks_b_v2_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_Cafe_A/Plaster_A/T_plaster_a_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_Cafe_A/Plaster_B/T_plaster_b_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_F/Bricks_Chunky/T_chunky_brick_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Building_F/Stucco/T_stucco_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Decals/T_decals_dripping_albedo.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Decals/T_grunge_decal_a_albedo.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Decals/T_grunge_decal_a_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Detail_Rocks/T_rocknoise_normal.uasset filter=lfs diff=lfs merge=lfs -text
+/RoverDelivery/Content/Downtown_West/Textures/Ground_Landscape/T_sand_normal.uasset filter=lfs diff=lfs merge=lfs -text
