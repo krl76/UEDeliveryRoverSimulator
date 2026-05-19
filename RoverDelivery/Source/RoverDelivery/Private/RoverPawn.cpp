@@ -16,10 +16,13 @@ ARoverPawn::ARoverPawn()
     CollisionBox = CreateDefaultSubobject<UBoxComponent>(TEXT("CollisionBox"));
     RootComponent = CollisionBox;
 
-    CollisionBox->SetBoxExtent(FVector(80.0f, 55.0f, 35.0f));
-    CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    CollisionBox->SetBoxExtent(FVector(70.0f, 50.0f, 30.0f));
+    CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     CollisionBox->SetCollisionObjectType(ECC_Pawn);
-    CollisionBox->SetCollisionResponseToAllChannels(ECR_Block);
+    CollisionBox->SetGenerateOverlapEvents(true);
+
+    CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+    CollisionBox->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 
     RoverMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RoverMesh"));
     RoverMesh->SetupAttachment(CollisionBox);
@@ -267,7 +270,7 @@ void ARoverPawn::MoveRover(float DeltaTime)
     const FVector ForwardDirection = GetActorForwardVector();
     const FVector DeltaLocation = ForwardDirection * ThrottleValue * CurrentSpeed * DeltaTime;
 
-    AddActorWorldOffset(DeltaLocation, true);
+    AddActorWorldOffset(DeltaLocation, false);
 }
 
 void ARoverPawn::RotateRover(float DeltaTime)
@@ -280,7 +283,7 @@ void ARoverPawn::RotateRover(float DeltaTime)
     const float DeltaYaw = SteerValue * TurnSpeed * DeltaTime;
     const FRotator DeltaRotation = FRotator(0.0f, DeltaYaw, 0.0f);
 
-    AddActorLocalRotation(DeltaRotation, true);
+    AddActorLocalRotation(DeltaRotation, false);
 }
 
 void ARoverPawn::ApplyCameraRotation()
