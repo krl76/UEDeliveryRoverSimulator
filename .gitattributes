@@ -17,13 +17,3 @@
 /RoverDelivery/Content/Downtown_West/Textures/Decals/T_grunge_decal_a_normal.uasset filter=lfs diff=lfs merge=lfs -text
 /RoverDelivery/Content/Downtown_West/Textures/Detail_Rocks/T_rocknoise_normal.uasset filter=lfs diff=lfs merge=lfs -text
 /RoverDelivery/Content/Downtown_West/Textures/Ground_Landscape/T_sand_normal.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Building/CH/A/Kit_Bldg_CHA_L2_A/Mesh/SM_BLDG_CHA_L02_A_Entrance_01_N1.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Building/CH/D/Kit_Bldg_CHD_L1_A/Mesh/SM_BLDG_CHD_L1_A_Entrance_01_N1.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Building/CH/G/Kit_Bldg_CHG_L1_A/Mesh/SM_BLDG_CHG_L01_A_Entrance_01_N1.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Building/NY/G/Kit_Bldg_NYG_L1_A/Mesh/SM_BLDG_NYG_L01_A_Entrance_01_N1.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Building/NY/G/Kit_Bldg_NYG_L2_A/Mesh/SM_BLDG_NYG_L02_A_Wall_04_N1.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Building/SF/J/Kit_Bldg_SFJ_L1_A/Mesh/SM_BLDG_SFJ_L1_A1_Entrance_01_N1.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Lighting/HDRI_SFCorner.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Textures/Block/T_Block_PackedB.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Textures/Brick/T_Brick_PackedB.uasset filter=lfs diff=lfs merge=lfs -text
-/RoverDelivery/Content/CitySampleBuildings/Textures/BrickOffsetAlt/T_BrickOffsetAlt_N.uasset filter=lfs diff=lfs merge=lfs -text
