@@ -11,6 +11,8 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class USoundBase;
+class UAudioComponent;
 
 UCLASS()
 class ROVERDELIVERY_API ARoverPawn : public APawn
@@ -194,6 +196,55 @@ protected:
 
     UPROPERTY(BlueprintReadOnly, Category = "Rover|Battery", meta = (AllowPrivateAccess = "true"))
     bool bIsCharging = false;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover|Components")
+    UAudioComponent* BoostLoopAudio;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover|Components")
+    UAudioComponent* BrakeLoopAudio;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Rover|Components")
+    UAudioComponent* ChargingLoopAudio;
+
+protected:
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    USoundBase* BoostLoopSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    USoundBase* BrakeLoopSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    USoundBase* StartChargingSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    USoundBase* ChargingLoopSound;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    USoundBase* ChargeCompleteSound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float BoostLoopVolume = 0.7f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float BrakeLoopVolume = 1.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float ChargingLoopVolume = 0.6f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float BrakeSoundMinSpeed = 120.0f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    USoundBase* LowBatterySound;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float LowBatterySoundVolume = 0.7f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float LowBatteryWarningResetThreshold = 0.25f;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Audio", meta = (AllowPrivateAccess = "true"))
+    float AudioFadeTime = 0.15f;
 
 private:
     float ThrottleValue = 0.0f;
@@ -206,6 +257,8 @@ private:
     float CameraPitch = -25.0f;
     
     bool bRoverInputBlocked = false;
+    
+    bool bLowBatteryWarningPlayed = false;
 
 private:
     void HandleThrottle(const FInputActionValue& Value);
@@ -244,6 +297,10 @@ private:
     
     bool IsObstacleAhead(float DeltaTime) const;
     void MoveWithBlocking(const FVector& DeltaLocation);
+    
+    void StartLoopSound(UAudioComponent* AudioComponent, USoundBase* Sound, float Volume);
+    void StopLoopSound(UAudioComponent* AudioComponent);
+    void PlayOneShotSound(USoundBase* Sound, float Volume = 1.0f) const;
 
 protected:
     UFUNCTION(BlueprintImplementableEvent, Category = "Rover|Events")

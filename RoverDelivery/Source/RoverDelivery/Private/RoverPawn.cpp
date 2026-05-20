@@ -10,6 +10,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "Components/AudioComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Sound/SoundBase.h"
 
 ARoverPawn::ARoverPawn()
 {
@@ -42,6 +45,18 @@ ARoverPawn::ARoverPawn()
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(SpringArm);
     Camera->bUsePawnControlRotation = false;
+    
+    BoostLoopAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("BoostLoopAudio"));
+    BoostLoopAudio->SetupAttachment(CollisionBox);
+    BoostLoopAudio->bAutoActivate = false;
+
+    BrakeLoopAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("BrakeLoopAudio"));
+    BrakeLoopAudio->SetupAttachment(CollisionBox);
+    BrakeLoopAudio->bAutoActivate = false;
+
+    ChargingLoopAudio = CreateDefaultSubobject<UAudioComponent>(TEXT("ChargingLoopAudio"));
+    ChargingLoopAudio->SetupAttachment(CollisionBox);
+    ChargingLoopAudio->bAutoActivate = false;
 
     AutoPossessPlayer = EAutoReceiveInput::Player0;
 }
@@ -189,22 +204,51 @@ void ARoverPawn::HandleSteerCompleted(const FInputActionValue& Value)
 
 void ARoverPawn::HandleBoostStarted()
 {
+    if (bRoverInputBlocked || bIsCharging)
+    {
+        return;
+    }
+
     bBoosting = true;
+
+    const bool bCanBoost =
+        BatteryPercent > 0.05f &&
+        ThrottleValue > 0.0f &&
+        FMath::Abs(CurrentForwardSpeed) > 50.0f;
+
+    if (bCanBoost)
+    {
+        StartLoopSound(BoostLoopAudio, BoostLoopSound, BoostLoopVolume);
+    }
 }
 
 void ARoverPawn::HandleBoostCompleted()
 {
     bBoosting = false;
+    StopLoopSound(BoostLoopAudio);
 }
 
 void ARoverPawn::HandleBrakeStarted()
 {
+    if (bRoverInputBlocked || bIsCharging)
+    {
+        return;
+    }
+
+    const bool bWasMoving = FMath::Abs(CurrentForwardSpeed) >= BrakeSoundMinSpeed;
+
     bBraking = true;
+
+    if (bWasMoving)
+    {
+        StartLoopSound(BrakeLoopAudio, BrakeLoopSound, BrakeLoopVolume);
+    }
 }
 
 void ARoverPawn::HandleBrakeCompleted()
 {
     bBraking = false;
+    StopLoopSound(BrakeLoopAudio);
 }
 
 void ARoverPawn::HandleLookX(const FInputActionValue& Value)
@@ -530,6 +574,9 @@ void ARoverPawn::SetRoverInputBlocked(bool bBlocked)
     CurrentForwardSpeed = 0.0f;
     bBoosting = false;
     bBraking = false;
+
+    StopLoopSound(BoostLoopAudio);
+    StopLoopSound(BrakeLoopAudio);
 }
 
 float ARoverPawn::GetBatteryPercent() const
@@ -548,11 +595,18 @@ void ARoverPawn::UpdateBattery(float DeltaTime)
     {
         BatteryPercent += BatteryChargeRate * DeltaTime;
         BatteryPercent = FMath::Clamp(BatteryPercent, 0.0f, 1.0f);
-
+        
+        if (BatteryPercent >= LowBatteryWarningResetThreshold)
+        {
+            bLowBatteryWarningPlayed = false;
+        }
+        
         if (BatteryPercent >= 1.0f)
         {
             BatteryPercent = 1.0f;
-            bIsCharging = false;
+
+            StopCharging();
+            PlayOneShotSound(ChargeCompleteSound, ChargingLoopVolume);
         }
 
         return;
@@ -587,6 +641,12 @@ void ARoverPawn::UpdateBattery(float DeltaTime)
 
     BatteryPercent -= CurrentDrainRate * DeltaTime;
     BatteryPercent = FMath::Clamp(BatteryPercent, 0.0f, 1.0f);
+    
+    if (BatteryPercent <= LowBatteryThreshold && !bLowBatteryWarningPlayed)
+    {
+        PlayOneShotSound(LowBatterySound, LowBatterySoundVolume);
+        bLowBatteryWarningPlayed = true;
+    }
 }
 
 bool ARoverPawn::IsObstacleAhead(float DeltaTime) const
@@ -687,6 +747,11 @@ void ARoverPawn::MoveWithBlocking(const FVector& DeltaLocation)
 
 void ARoverPawn::StartCharging()
 {
+    if (bIsCharging)
+    {
+        return;
+    }
+
     bIsCharging = true;
 
     CurrentForwardSpeed = 0.0f;
@@ -695,14 +760,68 @@ void ARoverPawn::StartCharging()
     SteerValue = 0.0f;
     bBoosting = false;
     bBraking = false;
+
+    StopLoopSound(BoostLoopAudio);
+    StopLoopSound(BrakeLoopAudio);
+
+    PlayOneShotSound(StartChargingSound, ChargingLoopVolume);
+    StartLoopSound(ChargingLoopAudio, ChargingLoopSound, ChargingLoopVolume);
 }
 
 void ARoverPawn::StopCharging()
 {
+    if (!bIsCharging)
+    {
+        return;
+    }
+
     bIsCharging = false;
+    StopLoopSound(ChargingLoopAudio);
 }
 
 bool ARoverPawn::IsCharging() const
 {
     return bIsCharging;
+}
+
+void ARoverPawn::StartLoopSound(UAudioComponent* AudioComponent, USoundBase* Sound, float Volume)
+{
+    if (!AudioComponent || !Sound)
+    {
+        return;
+    }
+
+    if (AudioComponent->IsPlaying())
+    {
+        return;
+    }
+
+    AudioComponent->SetSound(Sound);
+    AudioComponent->SetVolumeMultiplier(Volume);
+    AudioComponent->FadeIn(AudioFadeTime, Volume);
+}
+
+void ARoverPawn::StopLoopSound(UAudioComponent* AudioComponent)
+{
+    if (!AudioComponent || !AudioComponent->IsPlaying())
+    {
+        return;
+    }
+
+    AudioComponent->FadeOut(AudioFadeTime, 0.0f);
+}
+
+void ARoverPawn::PlayOneShotSound(USoundBase* Sound, float Volume) const
+{
+    if (!Sound)
+    {
+        return;
+    }
+
+    UGameplayStatics::PlaySoundAtLocation(
+        this,
+        Sound,
+        GetActorLocation(),
+        Volume
+    );
 }
