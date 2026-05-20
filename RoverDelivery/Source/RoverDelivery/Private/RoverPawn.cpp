@@ -235,6 +235,11 @@ void ARoverPawn::HandleLookY(const FInputActionValue& Value)
     ApplyCameraRotation();
 }
 
+void ARoverPawn::SetLookSensitivity(float NewSensitivity)
+{
+    LookSensitivity = FMath::Clamp(NewSensitivity, 0.3f, 2.5f);
+}
+
 void ARoverPawn::HandleInteractStarted()
 {
     OnInteractPressed();

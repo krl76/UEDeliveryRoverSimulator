@@ -126,8 +126,8 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Steering", meta = (AllowPrivateAccess = "true"))
     float CurrentSteerValue = 0.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Camera")
-    float LookSensitivity = 0.7f;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rover|Camera", meta = (AllowPrivateAccess = "true"))
+    float LookSensitivity = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rover|Camera")
     float MinCameraPitch = -70.0f;
@@ -275,4 +275,7 @@ protected:
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rover|Battery")
     bool IsCharging() const;
+    
+    UFUNCTION(BlueprintCallable, Category = "Rover|Camera")
+    void SetLookSensitivity(float NewSensitivity);
 };
